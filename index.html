@@ -1,17 +1,88 @@
-
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image.prod.js"></script>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #start-button {
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 16px 32px;
+        font-size: 20px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        z-index: 999;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <button id="start-button">Start AR</button>
+
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      embedded
+    >
+      <a-assets>
+        <video
+          id="ar-video"
+          src="./video.mp4"
+          preload="auto"
+          loop
+          muted
+          playsinline
+          webkit-playsinline
+        ></video>
+      </a-assets>
+
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane color="blue" opaciy="0.5" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane>
+        <a-video
+          src="#ar-video"
+          position="0 0 0"
+          width="1"
+          height="0.552"
+          rotation="0 0 0"
+        ></a-video>
       </a-entity>
     </a-scene>
+
+    <script>
+      const btn = document.getElementById('start-button');
+      const video = document.getElementById('ar-video');
+
+      btn.addEventListener('click', () => {
+        btn.style.display = 'none';
+
+        const sceneEl = document.querySelector('a-scene');
+
+        const startAR = () => {
+          const arSystem = sceneEl.systems['mindar-image-system'];
+          arSystem.start();
+
+          // Play video when target is found, pause when lost
+          sceneEl.addEventListener('targetFound', () => {
+            video.play();
+          });
+          sceneEl.addEventListener('targetLost', () => {
+            video.pause();
+          });
+        };
+
+        if (sceneEl.hasLoaded) {
+          startAR();
+        } else {
+          sceneEl.addEventListener('loaded', startAR);
+        }
+      });
+    </script>
   </body>
 </html>
