@@ -8,39 +8,15 @@
       * { margin: 0; padding: 0; }
       body { overflow: hidden; }
 
-      #pinned-video-container {
+      /* Invisible tap zone over the whole screen, only active when target visible */
+      #tap-zone {
         display: none;
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 999;
-        width: 80vw;
-        max-width: 480px;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 10;
       }
-      #pinned-video-container video {
-        width: 100%;
-        display: block;
-      }
-      #close-pinned {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: rgba(0,0,0,0.6);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        font-size: 18px;
-        cursor: pointer;
-        z-index: 1000;
-        line-height: 32px;
-        text-align: center;
-      }
+
       #tap-hint {
         display: none;
         position: fixed;
@@ -49,17 +25,56 @@
         text-align: center;
         color: white;
         font-family: sans-serif;
-        font-size: 14px;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-        z-index: 998;
+        font-size: 15px;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+        z-index: 11;
         pointer-events: none;
+      }
+
+      #pinned-container {
+        display: none;
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 20;
+        width: 85vw;
+        max-width: 500px;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+        background: #000;
+      }
+
+      #pinned-container video {
+        width: 100%;
+        display: block;
+      }
+
+      #close-btn {
+        position: absolute;
+        top: 10px; right: 10px;
+        background: rgba(0,0,0,0.65);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 34px; height: 34px;
+        font-size: 18px;
+        cursor: pointer;
+        z-index: 21;
+        line-height: 34px;
+        text-align: center;
       }
     </style>
   </head>
   <body>
 
-    <div id="pinned-video-container">
-      <button id="close-pinned">✕</button>
+    <!-- Transparent overlay to catch taps -->
+    <div id="tap-zone"></div>
+    <div id="tap-hint">👆 Tap anywhere to pin the video</div>
+
+    <!-- Pinned video overlay -->
+    <div id="pinned-container">
+      <button id="close-btn">✕</button>
       <video
         id="pinned-video"
         src="./video.mp4"
@@ -68,8 +83,6 @@
         webkit-playsinline
       ></video>
     </div>
-
-    <div id="tap-hint">👆 Tap the video to pin it</div>
 
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind;"
@@ -90,19 +103,10 @@
         ></video>
       </a-assets>
 
-      <!-- Added cursor + raycaster to camera -->
-      <a-camera
-        position="0 0 0"
-        look-controls="enabled: false"
-        cursor="fuse: false; rayOrigin: mouse;"
-        raycaster="far: 10000; objects: .clickable"
-      ></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0" video-handler>
-        <!-- Added class="clickable" -->
+      <a-entity mindar-image-target="targetIndex: 0" video-handler></a-entity>
         <a-video
-          id="ar-video-plane"
-          class="clickable"
           src="#ar-video"
           position="0 0 0"
           width="1"
@@ -119,42 +123,49 @@
 
       AFRAME.registerComponent('video-handler', {
         init: function () {
-          const arVideo = document.getElementById('ar-video');
-          const pinnedContainer = document.getElementById('pinned-video-container');
-          const pinnedVideo = document.getElementById('pinned-video');
-          const tapHint = document.getElementById('tap-hint');
-          const closeBtn = document.getElementById('close-pinned');
-          const arPlane = document.getElementById('ar-video-plane');
+          const arVideo       = document.getElementById('ar-video');
+          const pinnedVideo   = document.getElementById('pinned-video');
+          const pinnedContainer = document.getElementById('pinned-container');
+          const tapZone       = document.getElementById('tap-zone');
+          const tapHint       = document.getElementById('tap-hint');
+          const closeBtn      = document.getElementById('close-btn');
 
           let isPinned = false;
-          let isTargetVisible = false;
+          let isVisible = false;
 
           this.el.addEventListener('targetFound', () => {
-            isTargetVisible = true;
+            isVisible = true;
             if (!isPinned) {
               arVideo.play();
+              tapZone.style.display = 'block';
               tapHint.style.display = 'block';
             }
           });
 
           this.el.addEventListener('targetLost', () => {
-            isTargetVisible = false;
+            isVisible = false;
             if (!isPinned) {
               arVideo.pause();
+              tapZone.style.display = 'none';
               tapHint.style.display = 'none';
             }
           });
 
-          // Now works because of cursor + raycaster + .clickable
-          arPlane.addEventListener('click', () => {
+          // Native touch event — works on all mobile browsers
+          tapZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             if (isPinned) return;
             isPinned = true;
+
+            tapZone.style.display = 'none';
             tapHint.style.display = 'none';
 
+            // Sync time, unmute, show pinned
             pinnedVideo.currentTime = arVideo.currentTime;
             pinnedVideo.muted = false;
             pinnedVideo.play();
             pinnedContainer.style.display = 'block';
+
             arVideo.pause();
           });
 
@@ -163,9 +174,10 @@
             pinnedVideo.pause();
             pinnedContainer.style.display = 'none';
 
-            if (isTargetVisible) {
+            if (isVisible) {
               arVideo.currentTime = pinnedVideo.currentTime;
               arVideo.play();
+              tapZone.style.display = 'block';
               tapHint.style.display = 'block';
             }
           });
