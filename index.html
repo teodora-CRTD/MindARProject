@@ -21,12 +21,10 @@
         overflow: hidden;
         box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       }
-
       #pinned-video-container video {
         width: 100%;
         display: block;
       }
-
       #close-pinned {
         position: absolute;
         top: 8px;
@@ -43,8 +41,8 @@
         line-height: 32px;
         text-align: center;
       }
-
       #tap-hint {
+        display: none;
         position: fixed;
         bottom: 40px;
         width: 100%;
@@ -54,14 +52,12 @@
         font-size: 14px;
         text-shadow: 0 1px 4px rgba(0,0,0,0.8);
         z-index: 998;
-        display: none;
         pointer-events: none;
       }
     </style>
   </head>
   <body>
 
-    <!-- Pinned video overlay -->
     <div id="pinned-video-container">
       <button id="close-pinned">✕</button>
       <video
@@ -73,7 +69,7 @@
       ></video>
     </div>
 
-    <div id="tap-hint">Tap the video to pin it to screen</div>
+    <div id="tap-hint">👆 Tap the video to pin it</div>
 
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind;"
@@ -94,11 +90,19 @@
         ></video>
       </a-assets>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <!-- Added cursor + raycaster to camera -->
+      <a-camera
+        position="0 0 0"
+        look-controls="enabled: false"
+        cursor="fuse: false; rayOrigin: mouse;"
+        raycaster="far: 10000; objects: .clickable"
+      ></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0" video-handler>
+        <!-- Added class="clickable" -->
         <a-video
           id="ar-video-plane"
+          class="clickable"
           src="#ar-video"
           position="0 0 0"
           width="1"
@@ -108,7 +112,6 @@
     </a-scene>
 
     <script>
-      // Remove VR button
       document.querySelector('a-scene').addEventListener('loaded', () => {
         const vrBtn = document.querySelector('.a-enter-vr');
         if (vrBtn) vrBtn.style.display = 'none';
@@ -126,7 +129,6 @@
           let isPinned = false;
           let isTargetVisible = false;
 
-          // Show/hide AR video with target
           this.el.addEventListener('targetFound', () => {
             isTargetVisible = true;
             if (!isPinned) {
@@ -143,32 +145,24 @@
             }
           });
 
-          // Tap AR video plane → pin to screen
+          // Now works because of cursor + raycaster + .clickable
           arPlane.addEventListener('click', () => {
             if (isPinned) return;
             isPinned = true;
             tapHint.style.display = 'none';
 
-            // Sync time and unmute
             pinnedVideo.currentTime = arVideo.currentTime;
             pinnedVideo.muted = false;
             pinnedVideo.play();
-
-            // Show pinned overlay
             pinnedContainer.style.display = 'block';
-
-            // Pause the AR version
             arVideo.pause();
           });
 
-          // Close pinned video → go back to AR mode
           closeBtn.addEventListener('click', () => {
             isPinned = false;
             pinnedVideo.pause();
-            pinnedVideo.muted = true;
             pinnedContainer.style.display = 'none';
 
-            // Resume AR video if target is still visible
             if (isTargetVisible) {
               arVideo.currentTime = pinnedVideo.currentTime;
               arVideo.play();
