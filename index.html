@@ -5,7 +5,8 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
-      body { margin: 0; overflow: hidden; }
+      * { margin: 0; padding: 0; }
+      body { overflow: hidden; }
       #start-button {
         position: fixed;
         top: 50%; left: 50%;
@@ -28,7 +29,7 @@
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
-      embedded
+      renderer="colorManagement: true"
     >
       <a-assets>
         <video
@@ -50,12 +51,18 @@
           position="0 0 0"
           width="1"
           height="0.552"
-          rotation="0 0 0"
         ></a-video>
       </a-entity>
     </a-scene>
 
     <script>
+      AFRAME.registerComponent('remove-vr-button', {
+        init: function () {
+          const vrButton = document.querySelector('.a-enter-vr');
+          if (vrButton) vrButton.remove();
+        }
+      });
+
       const btn = document.getElementById('start-button');
       const video = document.getElementById('ar-video');
 
@@ -63,25 +70,17 @@
         btn.style.display = 'none';
 
         const sceneEl = document.querySelector('a-scene');
+        sceneEl.setAttribute('remove-vr-button', '');
 
         const startAR = () => {
           const arSystem = sceneEl.systems['mindar-image-system'];
           arSystem.start();
 
-          // Play video when target is found, pause when lost
-          sceneEl.addEventListener('targetFound', () => {
-            video.play();
-          });
-          sceneEl.addEventListener('targetLost', () => {
-            video.pause();
-          });
+          sceneEl.addEventListener('targetFound', () => video.play());
+          sceneEl.addEventListener('targetLost', () => video.pause());
         };
 
-        if (sceneEl.hasLoaded) {
-          startAR();
-        } else {
-          sceneEl.addEventListener('loaded', startAR);
-        }
+        sceneEl.hasLoaded ? startAR() : sceneEl.addEventListener('loaded', startAR);
       });
     </script>
   </body>
