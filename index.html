@@ -74,11 +74,10 @@
       <button id="close-btn">✕</button>
       <video
         id="pinned-video"
-        src="https://www.created.agency/wp-content/uploads/2026/03/video.mp4.mp4"
+        src="./video.mp4"
         loop
         playsinline
         webkit-playsinline
-        crossorigin="anonymous"
       ></video>
     </div>
 
@@ -92,13 +91,12 @@
       <a-assets>
         <video
           id="ar-video"
-          src="https://www.created.agency/wp-content/uploads/2026/03/video.mp4.mp4"
+          src="./video.mp4"
           preload="auto"
           loop
           muted
           playsinline
           webkit-playsinline
-          crossorigin="anonymous"
         ></video>
       </a-assets>
 
@@ -106,6 +104,7 @@
 
       <a-entity mindar-image-target="targetIndex: 0" video-handler>
         <a-video
+          id="ar-video-plane"
           src="#ar-video"
           position="0 0 0"
           width="1"
@@ -165,6 +164,7 @@
       AFRAME.registerComponent('video-handler', {
         init: function () {
           const arVideo         = document.getElementById('ar-video');
+          const arPlane         = document.getElementById('ar-video-plane');
           const pinnedVideo     = document.getElementById('pinned-video');
           const pinnedContainer = document.getElementById('pinned-container');
           const tapZone         = document.getElementById('tap-zone');
@@ -178,6 +178,7 @@
             isVisible = true;
             if (!isPinned) {
               arVideo.play().catch(() => {});
+              arPlane.setAttribute('visible', true);
               tapZone.style.display = 'block';
               tapHint.style.display = 'block';
             }
@@ -197,15 +198,17 @@
             if (isPinned) return;
             isPinned = true;
 
+            // Hide AR video plane
+            arVideo.pause();
+            arPlane.setAttribute('visible', false);
             tapZone.style.display = 'none';
             tapHint.style.display = 'none';
 
+            // Show pinned video with sound
             pinnedVideo.currentTime = arVideo.currentTime;
             pinnedVideo.muted = false;
             pinnedVideo.play().catch(() => {});
             pinnedContainer.style.display = 'block';
-
-            arVideo.pause();
           });
 
           closeBtn.addEventListener('click', () => {
@@ -213,7 +216,9 @@
             pinnedVideo.pause();
             pinnedContainer.style.display = 'none';
 
+            // Resume AR video if target still visible
             if (isVisible) {
+              arPlane.setAttribute('visible', true);
               arVideo.currentTime = pinnedVideo.currentTime;
               arVideo.play().catch(() => {});
               tapZone.style.display = 'block';
